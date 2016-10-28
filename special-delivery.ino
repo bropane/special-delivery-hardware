@@ -1,4 +1,3 @@
-
 #include "Particle.h"
 
 #include "LIS3DH.h"
@@ -211,6 +210,7 @@ int getLocation(String command){
 }
 
 int updateLocation(){
+  tracker.updateGPS();
   if(lastGpsPublish == 0){
     getLocation("");
   }else{
@@ -241,6 +241,7 @@ int publishStatus(String command){
 }
 
 int reboot(String command){
+  System.reset();
   return 1;
 }
 
