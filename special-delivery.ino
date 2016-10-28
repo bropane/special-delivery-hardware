@@ -77,6 +77,8 @@ void setup() {
   Particle.function("reboot", reboot);
   Particle.function("clear_config", clearConfig);
 
+  Particle.function("isGPSFixed", isGPSFixed);
+
   // Checks if woken up from sleep
   awake = ((accel.clearInterrupt() & LIS3DH::INT1_SRC_IA) != 0);
   if(awake){
@@ -221,6 +223,14 @@ int updateLocation(){
     }
   }
   return 1;
+}
+
+int isGPSFixed(String command){
+  if(tracker.gpsFix()){
+    return 1;
+  }else{
+    return 0;
+  }
 }
 
 void initLastState(){
