@@ -11,7 +11,7 @@
 
 
 // System threading is required for this project
-SYSTEM_THREAD(ENABLED);
+//SYSTEM_THREAD(ENABLED);
 
 const int BUILD = 1;
 
@@ -21,7 +21,7 @@ const unsigned long TIME_AFTER_PUBLISH_MS = 4000; // After publish, wait 4 secon
 const unsigned long TIME_AFTER_BOOT_MS = 5000; // At boot, wait 5 seconds before going to sleep again (after coming online)
 const unsigned long TIME_PUBLISH_BATTERY_SEC = 22 * 60; // every 22 minutes send a battery update to keep the cellular connection up
 
-const uint8_t movementThreshold = 16;
+const uint8_t movementThreshold = 25;
 
 const int addrConfig = 10;
 
@@ -178,8 +178,7 @@ int setTracking(String command){
   }else{
     tracker.gpsOn();
   }
-  char data[14];
-  sprintf(data, "Tracking: %d", config.tracking);
+  String data = String::format("Tracking: %d", config.tracking);
   Particle.publish("EVENT", data, 60, PRIVATE);
   return 1;
 }
@@ -198,29 +197,26 @@ int ping(String command){
 // Actively ask for a GPS reading if you're impatient. Only publishes if there's
 // a GPS fix, otherwise returns '0'
 int getLocation(String command){
-  float latitude = 0.0f;
-  float longitude = 0.0f;
-  lastGpsPublish = Time.now();
   if(tracker.gpsFix()){
-    latitude = tracker.readLat();
-    longitude = tracker.readLon();
-  }
-  String data = String::format("%f,%f", latitude, longitude);
-  if(config.tMode == 1){
-    Particle.publish("LOCATION", data, 60, PRIVATE);
-  }else{
-    Serial.println("LOCATION: " + data);
+    String data = tracker.readLatLon();
+    lastGpsPublish = millis();
+    if(config.tMode == 1){
+      Particle.publish("LOCATION", data, 60, PRIVATE);
+    }else{
+      Serial.println("LOCATION: " + data);
+    }
   }
   return 1;
 }
 
 int updateLocation(){
+  tracker.preNMEA();
   tracker.updateGPS();
   if(lastGpsPublish == 0){
     getLocation("");
   }else{
-    int timeDelay = (60*60)/config.txRate; // How many seconds need to elapse before publish
-    int timeElapsed = Time.now() - lastGpsPublish;
+    int timeDelay = ((60*60)/config.txRate)*1000; // How many milliseconds need to elapse before publish
+    int timeElapsed = millis() - lastGpsPublish;
     if(timeElapsed >= timeDelay){
       getLocation("");
     }
