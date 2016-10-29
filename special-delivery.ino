@@ -210,7 +210,6 @@ int getLocation(String command){
 }
 
 int updateLocation(){
-  tracker.preNMEA();
   tracker.updateGPS();
   if(lastGpsPublish == 0){
     getLocation("");
