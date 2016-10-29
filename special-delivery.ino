@@ -198,11 +198,14 @@ int ping(String command){
 // Actively ask for a GPS reading if you're impatient. Only publishes if there's
 // a GPS fix, otherwise returns '0'
 int getLocation(String command){
-  String data = "None";
+  float latitude = 0.0f;
+  float longitude = 0.0f;
   lastGpsPublish = Time.now();
   if(tracker.gpsFix()){
-    data = tracker.readLatLon();
+    latitude = tracker.readLat();
+    longitude = tracker.readLon();
   }
+  String data = String::format("%f,%f", latitude, longitude);
   if(config.tMode == 1){
     Particle.publish("LOCATION", data, 60, PRIVATE);
   }else{
