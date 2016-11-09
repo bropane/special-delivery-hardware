@@ -61,17 +61,12 @@ void setup() {
   Serial.println("Connection Established");
   Serial.println("Special Delivery Build: " + BUILD);
 
-  Particle.variable("tmode",config.tMode);
-  Particle.variable("track",config.tracking);
-  Particle.variable("txRate", config.txRate);
-  Particle.variable("armState",armStateToString);
-
+  //TODO Add function for printing Config params
   Particle.function("arm", arm);
   Particle.function("disarm", disarm);
-  Particle.function("setTMode", transmitMode);
+  Particle.function("setTMode", setTransmitMode);
   Particle.function("getLocation", getLocation);
   Particle.function("setTracking", setTracking);
-  Particle.function("getStatus", publishStatus);
   Particle.function("setTxRate", setTxRate);
   Particle.function("ping", ping);
   Particle.function("reboot", reboot);
@@ -85,7 +80,7 @@ void setup() {
     setTracking("1");
     disarm("");
     EEPROM.put(addrConfig, config);
-    Particle.publish("EVENT", "Motion Detected", 60, PRIVATE);
+    publishEvent("Motion Detected", "", 7, 3);
   }
 
   if(config.tracking){
@@ -115,26 +110,16 @@ void initEEPROM(){
   }
 }
 
-String armStateToString(){
-  String output;
+void initLastState(){
   switch(config.state){
     case 0:
-      output = "DISARMED";
+      // Disarmed, do nothing
       break;
     case 1:
-      output = "ARMED";
+      // Armed, resume sleep
+      arm("");
       break;
   }
-  return output;
-}
-
-// Allows you to remotely change whether a device is publishing to the cloud
-// or is only reporting data over Serial. Saves data when using only Serial!
-// Change the default at the top of the code.
-int transmitMode(String command){
-  config.tMode = atoi(command);
-  EEPROM.put(addrConfig, config);
-  return 1;
 }
 
 // Arms the tracker by dropping into deep sleep and waiting for wake signals
@@ -156,7 +141,9 @@ int arm(String command){
   setTracking("0");
   config.state = 1;
   EEPROM.put(addrConfig, config);
-  publishStatus("");
+  char value[8];
+  sprintf(value, "%d", config.wakeDelay);
+  publishEvent("Armed", value, 1, 2);
   arming = true;
   return 1;
 }
@@ -165,32 +152,7 @@ int arm(String command){
 int disarm(String command){
   config.state = 0;
   EEPROM.put(addrConfig, config);
-  publishStatus("");
-  return 1;
-}
-
-// Allows user to manually turn on or off GPS Receiver
-int setTracking(String command){
-  config.tracking = atoi(command);
-  EEPROM.put(addrConfig, config);
-  if(config.tracking == 0){
-    tracker.gpsOff();
-  }else{
-    tracker.gpsOn();
-  }
-  String data = String::format("Tracking: %d", config.tracking);
-  Particle.publish("EVENT", data, 60, PRIVATE);
-  return 1;
-}
-
-int setTxRate(String command){
-  config.txRate = atoi(command);
-  EEPROM.put(addrConfig, config);
-  return 1;
-}
-
-// Gets all information about tracker, not to be used often
-int ping(String command){
+  publishEvent("Disarmed", "", 2, 2);
   return 1;
 }
 
@@ -198,12 +160,15 @@ int ping(String command){
 // a GPS fix, otherwise returns '0'
 int getLocation(String command){
   if(tracker.gpsFix()){
-    String data = tracker.readLatLon();
-    lastGpsPublish = millis();
-    if(config.tMode == 1){
-      Particle.publish("LOCATION", data, 60, PRIVATE);
-    }else{
-      Serial.println("LOCATION: " + data);
+    // If GPS is on for a while it may say it's fixed but output no coords
+    if(tracker.readLatLon().length() > 0){
+      String data = tracker.readLatLon();
+      lastGpsPublish = millis();
+      if(config.tMode == 1){
+        publishLocation(data);
+      }else{
+        Serial.println("LOCATION: " + data);
+      }
     }
   }
   return 1;
@@ -231,30 +196,71 @@ int isGPSFixed(String command){
   }
 }
 
-void initLastState(){
-  switch(config.state){
-    case 0:
-      // Disarmed, do nothing
-      break;
-    case 1:
-      // Armed, resume sleep
-      arm("");
-      break;
+// Allows user to manually turn on or off GPS Receiver
+int setTracking(String command){
+  config.tracking = atoi(command);
+  EEPROM.put(addrConfig, config);
+  if(config.tracking == 0){
+    tracker.gpsOff();
+  }else{
+    tracker.gpsOn();
   }
+  char value[2];
+  sprintf(value, "%d", config.tracking);
+  publishEvent("Tracking Toggled", value, 3, 2);
+  return 1;
 }
 
-int publishStatus(String command){
-  Particle.publish("EVENT", armStateToString(), 60, PRIVATE);
+int setTxRate(String command){
+  config.txRate = atoi(command);
+  EEPROM.put(addrConfig, config);
+  char value[8];
+  sprintf(value, "%d", config.txRate);
+  publishEvent("TxRate Changed", value, 5, 2);
+  return 1;
+}
+
+// Allows you to remotely change whether a device is publishing to the cloud
+// or is only reporting data over Serial. Saves data when using only Serial!
+// Change the default at the top of the code.
+int setTransmitMode(String command){
+  config.tMode = atoi(command);
+  EEPROM.put(addrConfig, config);
+  char value[2];
+  sprintf(value, "%d", config.tMode);
+  publishEvent("Transmit Mode Changed", value, 6, 1);
+  return 1;
+}
+
+// Gets all information about tracker, not to be used often
+int ping(String command){
   return 1;
 }
 
 int reboot(String command){
+  publishEvent("Rebooted", "", 9, 2);
   System.reset();
   return 1;
 }
 
 int clearConfig(String command){
+  publishEvent("Cleared Config", "", 10, 3);
   EEPROM.clear();
   System.reset();
+  return 1;
+}
+
+int publishEvent(const char *name, const char *value, int code, int priority){
+  // Sends json string containing info about events
+  char data[64];
+  sprintf(data, "{\"name\":\"%s\",\"value\":\"%s\",\"code\":%d,\"priority\":%d}"
+    , name, value, code, priority);
+  Particle.publish("EVENT", data, 60, PRIVATE);
+  return 1;
+}
+
+int publishLocation(const char *position){
+  String data = String::format("{\"position\":%s}", position);
+  Particle.publish("LOCATION", data, 60, PRIVATE);
   return 1;
 }
