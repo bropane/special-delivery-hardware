@@ -4,14 +4,9 @@
 #include "AssetTracker.h"
 #include "math.h"
 
-// Example of Wake On Move with the AssetTracker and the Electron
-//
-// Official project location:
-// https://github.com/rickkas7/LIS3DH
-
-
-// System threading is required for this project
-//SYSTEM_THREAD(ENABLED);
+// Using SEMI_AUTOMATIC mode to get the lowest possible data usage by
+// registering functions and variables BEFORE connecting to the cloud.
+SYSTEM_MODE(SEMI_AUTOMATIC);
 
 const int BUILD = 1;
 
@@ -73,6 +68,7 @@ void setup() {
   Particle.function("clear_config", clearConfig);
 
   Particle.function("isGPSFixed", isGPSFixed);
+  Particle.connect();
 
   // Checks if woken up from sleep
   awake = ((accel.clearInterrupt() & LIS3DH::INT1_SRC_IA) != 0);
