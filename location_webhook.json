@@ -1,13 +1,10 @@
 {
-  "event": "EVENT",
-  "url": "https://special-delivery-gps.herokuapp.com/events/update",
+  "event": "LOCATION",
+  "url": "https://special-delivery-gps.herokuapp.com/location/update",
   "requestType": "POST",
   "mydevices": true,
   "json":{
-    "name": "{{name}}",
-    "value": "{{value}}",
-    "code": "{{code}}",
-    "priority": "{{priority}}",
+    "position": "{{position}}",
     "device": "{{PARTICLE_DEVICE_ID}}"
   },
   "headers":{
