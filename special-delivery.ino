@@ -38,6 +38,8 @@ struct Config{
   int state;
   // Determines how long the device will sleep(seconds) before being woken to check in status
   int wakeDelay;
+  // Sets to true if low battery already notified
+  int lowBattery
 };
 
 // Global objects
@@ -93,13 +95,16 @@ void loop() {
     updateLocation();
   }
   initLastState();
+  if(shouldNotifyLowBattery()){
+    notifyLowBattery();
+  }
 }
 
 void initEEPROM(){
   EEPROM.get(addrConfig, config);
   if(config.version != 0){
     // Init Default Config in EEPROM. MUST LEAVE VERSION = 0!
-    Config configInit = {0, 1, 0, 0, 30, 0, 21600};
+    Config configInit = {0, 1, 0, 0, 30, 0, 21600, 0};
     config = configInit;
     EEPROM.put(addrConfig, config);
     Serial.println("Initalized Default Configuration");
@@ -116,6 +121,23 @@ void initLastState(){
       arm("");
       break;
   }
+}
+
+bool shouldNotifyLowBattery(){
+  // Gets battery percentage 0-100%
+  float percentage = batteryMonitor.getSoC();
+  int didNotify = config.lowBattery;
+  if(percentage <= 20.0 && didNotify != 1){
+    return true
+  }else{
+    return false;
+  }
+}
+
+void notifyLowBattery(){
+  publishEvent("LOW BATTERY", "", 11, 3);
+  config.lowBattery = 1
+  EEPROM.put(addrConfig, config);
 }
 
 // Arms the tracker by dropping into deep sleep and waiting for wake signals
