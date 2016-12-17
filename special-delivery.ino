@@ -39,7 +39,7 @@ struct Config{
   // Determines how long the device will sleep(seconds) before being woken to check in status
   int wakeDelay;
   // Sets to true if low battery already notified
-  int lowBattery
+  int lowBattery;
 };
 
 // Global objects
@@ -48,6 +48,7 @@ LIS3DHSPI accel(SPI, A2, WKP);
 AssetTracker tracker = AssetTracker();
 Config config;
 
+double battery = 0.0;
 int lastGpsPublish = 0;
 int awake = 0;
 boolean arming = false;
@@ -55,7 +56,6 @@ boolean arming = false;
 void setup() {
   Serial.begin(9600);
   initEEPROM();
-  Serial.println("Connection Established");
   Serial.println("Special Delivery Build: " + BUILD);
 
   //TODO Add function for printing Config params
@@ -70,13 +70,14 @@ void setup() {
   Particle.function("clear_config", clearConfig);
 
   Particle.function("isGPSFixed", isGPSFixed);
+  Particle.variable("battery", battery);
   Particle.connect();
 
   // Checks if woken up from sleep
   awake = ((accel.clearInterrupt() & LIS3DH::INT1_SRC_IA) != 0);
   if(awake){
     setTracking("1");
-    disarm("");
+    config.state = 0;
     EEPROM.put(addrConfig, config);
     publishEvent("Motion Detected", "", 7, 3);
   }
@@ -125,18 +126,21 @@ void initLastState(){
 
 bool shouldNotifyLowBattery(){
   // Gets battery percentage 0-100%
-  float percentage = batteryMonitor.getSoC();
+  battery = batteryMonitor.getSoC();
   int didNotify = config.lowBattery;
-  if(percentage <= 20.0 && didNotify != 1){
-    return true
-  }else{
-    return false;
+  if(battery <= 20.0 && didNotify != 1){
+    return true;
   }
+  if(battery > 20.0 && didNotify == 1){ // Reset notify flag
+    config.lowBattery = 0;
+    EEPROM.put(addrConfig, config);
+  }
+  return false;
 }
 
 void notifyLowBattery(){
   publishEvent("LOW BATTERY", "", 11, 3);
-  config.lowBattery = 1
+  config.lowBattery = 1;
   EEPROM.put(addrConfig, config);
 }
 
@@ -171,6 +175,7 @@ int disarm(String command){
   config.state = 0;
   EEPROM.put(addrConfig, config);
   publishEvent("Disarmed", "", 2, 2);
+  setTracking("0");
   return 1;
 }
 
