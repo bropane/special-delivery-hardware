@@ -39,3 +39,9 @@ Special Delivery requires quite a bit of things to function properly.
 
 The device is fairly simple to use. Place the device where you want it to sit then call <br/>`particle call 'device name' arm`.
 This will arm the device using the default settings. The device will activate its GPS and transmit coordinates if it is moved with a high enough acceleration. It will also wake up every periodically to check battery levels and publish an event if it is running low. There are more commands exposed to play with the device if you interested. Check the special-delivery.ino file for details.
+
+--------
+
+##Packaging
+
+I've included some models that I used to package my device up. These were 3D printed using ABS plastic and sealed together using Acetone. There are three files that are named enc_*.stl.
