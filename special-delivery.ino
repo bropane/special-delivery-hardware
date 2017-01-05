@@ -59,18 +59,18 @@ void setup() {
   Serial.println("Special Delivery Build: " + BUILD);
 
   //TODO Add function for printing Config params
-  Particle.function("arm", arm);
-  Particle.function("disarm", disarm);
-  Particle.function("setTMode", setTransmitMode);
-  Particle.function("getLocation", getLocation);
-  Particle.function("setTracking", setTracking);
-  Particle.function("setTxRate", setTxRate);
-  Particle.function("ping", ping);
-  Particle.function("reboot", reboot);
-  Particle.function("clear_config", clearConfig);
+  Particle.function("arm", arm); // Puts device into deep sleep, waits for acceleration to wake up
+  Particle.function("disarm", disarm); // Puts device into an idle state
+  Particle.function("setTMode", setTransmitMode); // Pass 1 or 0 to cellular transmit on or off
+  Particle.function("getLocation", getLocation); // Returns last stored location
+  Particle.function("setTracking", setTracking); // Pass 1 or 0 to GPS on or off
+  Particle.function("setTxRate", setTxRate); // Sets the rate at which the GPS coordinates get transmitted to Particle Cloud
+  Particle.function("ping", ping); // Does nothing
+  Particle.function("reboot", reboot); // Self Explanatory
+  Particle.function("clear_config", clearConfig); // Clears EEPROM config to default state
 
-  Particle.function("isGPSFixed", isGPSFixed);
-  Particle.variable("battery", battery);
+  Particle.function("isGPSFixed", isGPSFixed); // Returns whether the GPS can give accurate coordinates.
+  Particle.variable("battery", battery); // Returns battery level
   Particle.connect();
 
   // Checks if woken up from sleep
